@@ -1,0 +1,21 @@
+# General
+.idea/
+.DS_Store
+*.iml
+
+# Django
+backend-django/env/
+backend-django/__pycache__/
+backend-django/*.pyc
+backend-django/db.sqlite3
+backend-django/static/
+backend-django/media/
+
+# Android
+frontend-android/.gradle/
+frontend-android/app/build/
+frontend-android/build/
+frontend-android/local.properties
+frontend-android/.idea/
+frontend-android/*.iml
+frontend-android/capture.png
