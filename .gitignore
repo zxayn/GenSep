@@ -2,6 +2,9 @@
 .idea/
 .DS_Store
 *.iml
+.gradle/
+build/
+local.properties
 
 # Django
 backend-django/env/
@@ -12,10 +15,9 @@ backend-django/static/
 backend-django/media/
 
 # Android
-frontend-android/.gradle/
-frontend-android/app/build/
-frontend-android/build/
-frontend-android/local.properties
+**/build/
+**/.gradle/
+**/local.properties
 frontend-android/.idea/
 frontend-android/*.iml
 frontend-android/capture.png
