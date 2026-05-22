@@ -1,6 +1,7 @@
 package com.example.generateresep.catatan
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -172,153 +174,257 @@ fun CatatanCard(
     onIngredientsChange: (List<String>) -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = LightGreenBg),
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = LightGreenBg.copy(alpha = 0.9f)
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(
+                animationSpec = tween(durationMillis = 300)
+            )
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(20.dp)
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 if (note.isEditing) {
-                    TextField(
-                        value = note.title,
-                        onValueChange = onTitleChange,
-                        placeholder = { Text("Judul Resep") },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = GreenMain
-                        ),
-                        textStyle = LocalTextStyle.current.copy(
-                            color = GreenMain,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
+                    NoteTitleEditor(
+                        title = note.title,
+                        onTitleChange = onTitleChange
                     )
                 } else {
                     Text(
                         text = note.title.ifEmpty { "Tanpa Judul" },
                         color = GreenMain,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 20.sp
                     )
                 }
                 
                 Text(
                     text = "Bahan-Bahan Utama :",
-                    color = GreenMain,
+                    color = GreenMain.copy(alpha = 0.8f),
                     fontSize = 14.sp,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
                 )
                 
                 if (note.isEditing) {
-                    note.ingredients.forEachIndexed { index, ingredient ->
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("• ", color = GreenMain)
-                            TextField(
-                                value = ingredient,
-                                onValueChange = { newVal ->
-                                    val newList = note.ingredients.toMutableList()
-                                    newList[index] = newVal
-                                    onIngredientsChange(newList)
-                                },
-                                placeholder = { Text("Tambah bahan...") },
-                                colors = TextFieldDefaults.colors(
-                                    focusedContainerColor = Color.Transparent,
-                                    unfocusedContainerColor = Color.Transparent
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (note.ingredients.size > 1) {
-                                IconButton(
-                                    onClick = {
-                                        val newList = note.ingredients.toMutableList()
-                                        newList.removeAt(index)
-                                        onIngredientsChange(newList)
-                                    },
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Hapus Baris",
-                                        tint = Color.Red.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    TextButton(onClick = {
-                        val newList = note.ingredients.toMutableList()
-                        newList.add("")
-                        onIngredientsChange(newList)
-                    }) {
-                        Text("+ Tambah Bahan", color = GreenMain)
-                    }
+                    NoteIngredientsEditor(
+                        ingredients = note.ingredients,
+                        onIngredientsChange = onIngredientsChange
+                    )
                 } else {
-                    note.ingredients.forEachIndexed { index, ingredient ->
-                        if (note.isExpanded || (index < 2)) {
-                            Row(modifier = Modifier.padding(vertical = 1.dp)) {
-                                Text("• ", color = GreenMain, fontSize = 13.sp)
-                                Text(
-                                    text = ingredient,
-                                    color = GreenMain,
-                                    fontSize = 13.sp,
-                                    lineHeight = 16.sp
-                                )
-                            }
-                        }
-                    }
+                    NoteIngredientsDisplay(
+                        ingredients = note.ingredients,
+                        isExpanded = note.isExpanded
+                    )
                 }
             }
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                if (!note.isEditing) {
-                    IconButton(onClick = onEditClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.edit),
-                            contentDescription = "Edit",
-                            tint = GreenMain,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+            NoteActionButtons(
+                note = note,
+                onEditClick = onEditClick,
+                onDeleteClick = onDeleteClick,
+                onExpandClick = onExpandClick
+            )
+        }
+    }
+}
 
-                if (note.isExpanded || note.isEditing) {
-                    IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.hapus),
-                            contentDescription = "Hapus",
-                            tint = GreenMain,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteTitleEditor(
+    title: String,
+    onTitleChange: (String) -> Unit
+) {
+    TextField(
+        value = title,
+        onValueChange = onTitleChange,
+        placeholder = { Text("Judul Resep", color = GreenMain.copy(alpha = 0.4f)) },
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
+            focusedIndicatorColor = GreenMain,
+            cursorColor = GreenMain
+        ),
+        textStyle = LocalTextStyle.current.copy(
+            color = GreenMain,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp
+        ),
+        modifier = Modifier.fillMaxWidth()
+    )
+}
 
-                if (!note.isEditing) {
-                    IconButton(onClick = onExpandClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.dropdown),
-                            contentDescription = if (note.isExpanded) "Collapse" else "Expand",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .size(20.dp)
-                                .rotate(if (note.isExpanded) 90f else 0f)
-                        )
-                    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteIngredientsEditor(
+    ingredients: List<String>,
+    onIngredientsChange: (List<String>) -> Unit
+) {
+    ingredients.forEachIndexed { index, ingredient ->
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("• ", color = GreenMain, fontWeight = FontWeight.Bold)
+            TextField(
+                value = ingredient,
+                onValueChange = { newVal ->
+                    val newList = ingredients.toMutableList()
+                    newList[index] = newVal
+                    onIngredientsChange(newList)
+                },
+                placeholder = {
+                    Text("Tambah bahan...",
+                        fontSize = 14.sp,
+                        color = GreenMain.copy(alpha = 0.4f)
+                    )
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    cursorColor = GreenMain
+                ),
+                modifier = Modifier.weight(1f)
+            )
+            if (ingredients.size > 1) {
+                IconButton(
+                    onClick = {
+                        val newList = ingredients.toMutableList()
+                        newList.removeAt(index)
+                        onIngredientsChange(newList)
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Hapus Baris",
+                        tint = Color.Red.copy(alpha = 0.5f),
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         }
+    }
+    TextButton(
+        onClick = {
+            val newList = ingredients.toMutableList()
+            newList.add("")
+            onIngredientsChange(newList)
+        },
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Default.Add,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = GreenMain
+        )
+        Spacer(Modifier.width(4.dp))
+        Text("Tambah Bahan", color = GreenMain, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun NoteIngredientsDisplay(
+    ingredients: List<String>,
+    isExpanded: Boolean
+) {
+    Column {
+        ingredients.forEachIndexed { index, ingredient ->
+            AnimatedVisibility(
+                visible = isExpanded || index < 2,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(modifier = Modifier.padding(vertical = 3.dp)) {
+                    Text("• ", color = GreenMain, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = ingredient,
+                        color = GreenMain,
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteActionButtons(
+    note: Note,
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onExpandClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.padding(start = 8.dp)
+    ) {
+        if (!note.isEditing) {
+            ActionIconButton(
+                iconRes = R.drawable.edit,
+                contentDescription = "Edit",
+                onClick = onEditClick
+            )
+        }
+
+        AnimatedVisibility(visible = note.isExpanded || note.isEditing) {
+            ActionIconButton(
+                iconRes = R.drawable.hapus,
+                contentDescription = "Hapus",
+                onClick = onDeleteClick,
+                tint = if (note.isEditing) Color.Red.copy(alpha = 0.6f) else GreenMain
+            )
+        }
+
+        if (!note.isEditing) {
+            IconButton(
+                onClick = onExpandClick,
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(GreenMain.copy(alpha = 0.1f), CircleShape)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.dropdown),
+                    contentDescription = if (note.isExpanded) "Collapse" else "Expand",
+                    tint = GreenMain,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(if (note.isExpanded) 180f else 0f) // Ubah rotasi jadi 180 agar lebih standar
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionIconButton(
+    iconRes: Int,
+    contentDescription: String,
+    onClick: () -> Unit,
+    tint: Color = GreenMain
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(36.dp)
+            .background(tint.copy(alpha = 0.1f), CircleShape)
+    ) {
+        Icon(
+            painter = painterResource(id = iconRes),
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

@@ -12,15 +12,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.generateresep.R
+import com.example.generateresep.ui.theme.GenerateResepTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
     onBackClick: () -> Unit,
-    onRegisterClick: () -> Unit
+    onRegisterClick: () -> Unit,
 ) {
     var nama by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -62,8 +64,9 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -88,8 +91,9 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -115,8 +119,9 @@ fun RegisterScreen(
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -148,5 +153,16 @@ fun RegisterScreen(
         )
 
         Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegisterScreenPreview() {
+    GenerateResepTheme {
+        RegisterScreen(
+            onBackClick = {},
+            onRegisterClick = {}
+        )
     }
 }
