@@ -12,12 +12,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.generateresep.navigation.BottomNavigationBar
 import com.example.generateresep.navigation.NavGraph
+import com.example.generateresep.navigation.Screen
 import com.example.generateresep.ui.theme.GenerateResepTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -40,9 +44,19 @@ class MainActivity : ComponentActivity() {
                     if (showSplashScreen) {
                         SplashScreen()
                     } else {
+                        val navBackStackEntry by navController.currentBackStackEntryAsState()
+                        val currentRoute = navBackStackEntry?.destination?.route
+                        
+                        // Sembunyikan bottom bar di screen tertentu
+                        val shouldShowBottomBar = currentRoute != Screen.Login.route && 
+                                               currentRoute != Screen.Register.route &&
+                                               currentRoute != null
+
                         Scaffold(
                             bottomBar = {
-                                BottomNavigationBar(navController = navController)
+                                if (shouldShowBottomBar) {
+                                    BottomNavigationBar(navController = navController)
+                                }
                             },
                             containerColor = MaterialTheme.colorScheme.background
                         ) { paddingValues ->

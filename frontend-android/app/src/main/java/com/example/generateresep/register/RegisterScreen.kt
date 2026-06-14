@@ -16,18 +16,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.generateresep.R
 
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.generateresep.viewmodel.AuthViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
+    viewModel: AuthViewModel = viewModel(),
     onBackClick: () -> Unit,
     onRegisterClick: () -> Unit
 ) {
-    var nama by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-
     val lightGreen = Color(0xFFE8F5E9)
     val buttonDarkGreen = Color(0xFF6B9C00)
+
+    LaunchedEffect(viewModel.isAuthSuccess) {
+        if (viewModel.isAuthSuccess) {
+            onRegisterClick()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -46,24 +52,25 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(60.dp))
 
-        // Nama Field
+        // Username Field
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "Nama",
+                text = "Username",
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TextField(
-                value = nama,
-                onValueChange = { nama = it },
-                placeholder = { Text("Nama", color = Color.Gray) },
+                value = viewModel.username,
+                onValueChange = { viewModel.username = it },
+                placeholder = { Text("Username", color = Color.Gray) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -81,15 +88,16 @@ fun RegisterScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TextField(
-                value = email,
-                onValueChange = { email = it },
+                value = viewModel.email,
+                onValueChange = { viewModel.email = it },
                 placeholder = { Text("example82@gmail.com", color = Color.Gray) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -107,16 +115,17 @@ fun RegisterScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TextField(
-                value = password,
-                onValueChange = { password = it },
+                value = viewModel.password,
+                onValueChange = { viewModel.password = it },
                 placeholder = { Text("Password", color = Color.Gray) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -125,16 +134,28 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
+        // Error Message
+        viewModel.errorMessage?.let {
+            Text(text = it, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
+        }
+
         // Button
         Button(
-            onClick = onRegisterClick,
+            onClick = {
+                viewModel.register()
+            },
             modifier = Modifier
                 .fillMaxWidth(0.6f)
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = buttonDarkGreen),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            enabled = !viewModel.isLoading
         ) {
-            Text(text = "Buat Account", color = Color.White, fontWeight = FontWeight.Bold)
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+            } else {
+                Text(text = "Buat Account", color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

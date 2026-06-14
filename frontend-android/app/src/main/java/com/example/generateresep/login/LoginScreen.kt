@@ -1,7 +1,6 @@
 package com.example.generateresep.login
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,20 +14,24 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.generateresep.R
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.generateresep.viewmodel.AuthViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
+    viewModel: AuthViewModel = viewModel(),
     onLoginClick: () -> Unit,
     onCreateAccountClick: () -> Unit
 ) {
-    var usernameOrEmail by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var rememberMe by remember { mutableStateOf(false) }
-
     val lightGreen = Color(0xFFE8F5E9)
     val buttonLightGreen = Color(0xFFE8F5E9)
     val buttonDarkGreen = Color(0xFF6B9C00)
+
+    LaunchedEffect(viewModel.isAuthSuccess) {
+        if (viewModel.isAuthSuccess) {
+            onLoginClick()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -47,7 +50,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(60.dp))
 
-        // Username / Email Field
+        // Username Field
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = "Username",
@@ -56,15 +59,16 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TextField(
-                value = usernameOrEmail,
-                onValueChange = { usernameOrEmail = it },
-                placeholder = { Text("Username / Email", color = Color.Gray) },
+                value = viewModel.username,
+                onValueChange = { viewModel.username = it },
+                placeholder = { Text("Username", color = Color.Gray) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
@@ -82,49 +86,47 @@ fun LoginScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             TextField(
-                value = password,
-                onValueChange = { password = it },
+                value = viewModel.password,
+                onValueChange = { viewModel.password = it },
                 placeholder = { Text("Password", color = Color.Gray) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = TextFieldDefaults.textFieldColors(
-                    containerColor = lightGreen,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = lightGreen,
+                    unfocusedContainerColor = lightGreen,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 )
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Remember Me
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Checkbox(
-                checked = rememberMe,
-                onCheckedChange = { rememberMe = it },
-                colors = CheckboxDefaults.colors(checkedColor = buttonDarkGreen)
-            )
-            Text(text = "Ingat Saya", fontSize = 14.sp)
-        }
-
         Spacer(modifier = Modifier.weight(1f))
+
+        // Error Message
+        viewModel.errorMessage?.let {
+            Text(text = it, color = Color.Red, modifier = Modifier.padding(bottom = 8.dp))
+        }
 
         // Buttons
         Button(
-            onClick = onLoginClick,
+            onClick = {
+                viewModel.login()
+            },
             modifier = Modifier
                 .fillMaxWidth(0.6f)
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = buttonLightGreen),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            enabled = !viewModel.isLoading
         ) {
-            Text(text = "Login", color = Color(0xFF6B9C00), fontWeight = FontWeight.Bold)
+            if (viewModel.isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color(0xFF6B9C00))
+            } else {
+                Text(text = "Login", color = Color(0xFF6B9C00), fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

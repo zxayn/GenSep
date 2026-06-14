@@ -14,13 +14,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.generateresep.ui.theme.*
-import com.example.generateresep.utils.ThemeManager
+import com.example.generateresep.viewmodel.SettingsViewModel
 
 @Composable
-fun PengaturanScreen() {
-    var isNotificationEnabled by remember { mutableStateOf(true) }
-
+fun PengaturanScreen(
+    viewModel: SettingsViewModel = viewModel()
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -48,15 +49,15 @@ fun PengaturanScreen() {
         // Item Notifikasi
         SettingToggleItem(
             title = "Notifikasi",
-            isChecked = isNotificationEnabled,
-            onCheckedChange = { isNotificationEnabled = it }
+            isChecked = viewModel.isNotificationEnabled,
+            onCheckedChange = { viewModel.toggleNotification(it) }
         )
 
         // Item Tema
         SettingToggleItem(
             title = "Tema",
-            isChecked = ThemeManager.isDarkTheme,
-            onCheckedChange = { ThemeManager.isDarkTheme = it }
+            isChecked = viewModel.isDarkTheme,
+            onCheckedChange = { _ -> viewModel.toggleTheme() }
         )
 
         // Item Versi Aplikasi

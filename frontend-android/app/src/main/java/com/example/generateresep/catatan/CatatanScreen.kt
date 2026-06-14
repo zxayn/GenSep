@@ -22,39 +22,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.generateresep.R
+import com.example.generateresep.model.Note
 import com.example.generateresep.ui.theme.*
-
-data class Note(
-    val id: Int,
-    var title: String,
-    var ingredients: List<String>,
-    var isExpanded: Boolean = false,
-    var isEditing: Boolean = false
-)
+import com.example.generateresep.viewmodel.CatatanViewModel
 
 @Composable
-fun CatatanScreen() {
-    val notes = remember {
-        mutableStateListOf(
-            Note(
-                id = 1,
-                title = "Healthy Little Cravings",
-                ingredients = listOf(
-                    "Sayuran: 2 genggam Lamb's lettuce atau bayam bayi segar.",
-                    "Buah: 1 buah Apel, iris melintang.",
-                    "Protein: 50g Keju Feta, hancurkan kasar.",
-                    "Taburan: Biji bunga matahari atau biji labu.",
-                    "Dressing Rekomendasi: Campuran Balsamic vinaigrette atau madu dan lemon."
-                ),
-                isExpanded = true
-            )
-        )
-    }
-
-    val editingNote = notes.find { it.isEditing }
-    val isAnyEditing = editingNote != null
-
+fun CatatanScreen(
+    viewModel: CatatanViewModel = viewModel()
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -73,7 +50,7 @@ fun CatatanScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (notes.isEmpty()) {
+            if (viewModel.notes.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -89,36 +66,14 @@ fun CatatanScreen() {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     contentPadding = PaddingValues(bottom = 100.dp)
                 ) {
-                    items(notes, key = { it.id }) { note ->
+                    items(viewModel.notes, key = { it.id }) { note ->
                         CatatanCard(
                             note = note,
-                            onExpandClick = {
-                                val index = notes.indexOf(note)
-                                if (index != -1) {
-                                    notes[index] = note.copy(isExpanded = !note.isExpanded)
-                                }
-                            },
-                            onDeleteClick = {
-                                notes.remove(note)
-                            },
-                            onEditClick = {
-                                val index = notes.indexOf(note)
-                                if (index != -1) {
-                                    notes[index] = note.copy(isEditing = true, isExpanded = true)
-                                }
-                            },
-                            onTitleChange = { newTitle ->
-                                val index = notes.indexOf(note)
-                                if (index != -1) {
-                                    notes[index] = note.copy(title = newTitle)
-                                }
-                            },
-                            onIngredientsChange = { newIngredients ->
-                                val index = notes.indexOf(note)
-                                if (index != -1) {
-                                    notes[index] = note.copy(ingredients = newIngredients)
-                                }
-                            }
+                            onExpandClick = { viewModel.toggleExpand(note) },
+                            onDeleteClick = { viewModel.deleteNote(note) },
+                            onEditClick = { viewModel.startEditing(note) },
+                            onTitleChange = { viewModel.updateTitle(note, it) },
+                            onIngredientsChange = { viewModel.updateIngredients(note, it) }
                         )
                     }
                 }
@@ -127,20 +82,10 @@ fun CatatanScreen() {
 
         FloatingActionButton(
             onClick = {
-                if (isAnyEditing) {
-                    val index = notes.indexOf(editingNote)
-                    if (index != -1) {
-                        notes[index] = editingNote.copy(isEditing = false)
-                    }
+                if (viewModel.isAnyEditing) {
+                    viewModel.saveNote()
                 } else {
-                    val newNote = Note(
-                        id = (notes.maxOfOrNull { it.id } ?: 0) + 1,
-                        title = "",
-                        ingredients = listOf(""),
-                        isExpanded = true,
-                        isEditing = true
-                    )
-                    notes.add(0, newNote)
+                    viewModel.addNote()
                 }
             },
             containerColor = GreenMain,
@@ -152,8 +97,8 @@ fun CatatanScreen() {
             elevation = FloatingActionButtonDefaults.elevation(4.dp)
         ) {
             Icon(
-                imageVector = if (isAnyEditing) Icons.Default.Check else Icons.Default.Add,
-                contentDescription = if (isAnyEditing) "Simpan Catatan" else "Tambah Catatan",
+                imageVector = if (viewModel.isAnyEditing) Icons.Default.Check else Icons.Default.Add,
+                contentDescription = if (viewModel.isAnyEditing) "Simpan Catatan" else "Tambah Catatan",
                 tint = Color.White,
                 modifier = Modifier.size(36.dp)
             )

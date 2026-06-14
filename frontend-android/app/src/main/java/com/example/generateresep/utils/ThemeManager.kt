@@ -5,8 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 object ThemeManager {
-    // State global untuk mengatur tema aplikasi secara manual
-    // false = Light Theme, true = Dark Theme
     var isDarkTheme by mutableStateOf(false)
 
     fun toggleTheme() {

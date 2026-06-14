@@ -2,7 +2,6 @@ package com.example.generateresep.ui.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,8 +23,11 @@ import com.example.generateresep.R
 import com.example.generateresep.ui.theme.GreenMain
 import com.example.generateresep.ui.theme.LightGreenBg
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RecipeCard() {
+fun RecipeCard(
+    onClick: () -> Unit = {}
+) {
     var isLiked by remember { mutableStateOf(false) }
     var isSaved by remember { mutableStateOf(false) }
 
@@ -43,6 +45,7 @@ fun RecipeCard() {
     }
 
     Card(
+        onClick = onClick,
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = LightGreenBg),
         modifier = Modifier
