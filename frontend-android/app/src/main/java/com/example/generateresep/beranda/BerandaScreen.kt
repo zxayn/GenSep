@@ -39,27 +39,35 @@ import com.example.generateresep.ui.components.RecipeCard
 import com.example.generateresep.ui.components.CameraPreview
 import com.example.generateresep.ui.theme.*
 import com.example.generateresep.viewmodel.RecipeViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BerandaScreen(
     viewModel: RecipeViewModel = viewModel(),
     onRecipeClick: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val savedRecipes by viewModel.savedRecipes.collectAsState(initial = emptyList())
     var isCameraOpen by remember { mutableStateOf(false) }
+    var showInputSourceSelector by remember { mutableStateOf(false) }
     
     // Gallery Launcher
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.PickVisualMedia()
     ) { uri: Uri? ->
         uri?.let {
-            val source = ImageDecoder.createSource(context.contentResolver, it)
-            val bitmap = ImageDecoder.decodeBitmap(source)
-            viewModel.detectIngredients(bitmap)
-            isCameraOpen = false
+            scope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    val source = ImageDecoder.createSource(context.contentResolver, it)
+                    ImageDecoder.decodeBitmap(source)
+                }
+                viewModel.detectIngredients(bitmap)
+            }
         }
     }
 
@@ -227,7 +235,10 @@ fun BerandaScreen(
                 } else {
                     items(savedRecipes.size) { index ->
                         val recipe = savedRecipes[index]
-                        RecipeCard(onClick = { onRecipeClick(recipe.id) })
+                        RecipeCard(
+                            recipe = recipe,
+                            onClick = { onRecipeClick(recipe.id) }
+                        )
                     }
                 }
             }
@@ -302,54 +313,185 @@ fun BerandaScreen(
             }
         }
 
-        // Detection Results Dialog
+        // Detection Results Bottom Sheet
         if (viewModel.detectedIngredients.isNotEmpty()) {
-            AlertDialog(
+            ModalBottomSheet(
                 onDismissRequest = { viewModel.onIngredientsDetected(emptyList()) },
-                title = { Text("Bahan Terdeteksi", color = GreenMain) },
-                text = {
-                    Column {
-                        Text("Kami menemukan bahan-bahan berikut:")
-                        Spacer(modifier = Modifier.height(8.dp))
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = Color.White,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 16.dp)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Bahan Terdeteksi",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenMain
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    Text(
+                        "Kami menemukan bahan-bahan berikut. Klik 'Generate' untuk meracik resep!",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                    
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // List bahan dengan chip atau row rapi
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         viewModel.detectedIngredients.forEach { ingredient ->
-                            Text("• $ingredient", fontWeight = FontWeight.Medium)
+                            AssistChip(
+                                onClick = { /* Bisa hapus bahan jika mau */ },
+                                label = { Text(ingredient) },
+                                colors = AssistChipDefaults.assistChipColors(
+                                    containerColor = LightGreenBg,
+                                    labelColor = GreenMain
+                                ),
+                                border = AssistChipDefaults.assistChipBorder(
+                                    enabled = true,
+                                    borderColor = GreenMain.copy(alpha = 0.3f)
+                                ),
+                                shape = RoundedCornerShape(20.dp)
+                            )
                         }
                     }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = { 
-                            viewModel.generateByIngredients()
-                            viewModel.onIngredientsDetected(emptyList())
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = GreenMain)
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Generate AI")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(
-                        onClick = { 
-                            viewModel.searchByIngredients()
-                            viewModel.onIngredientsDetected(emptyList())
-                        },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenMain)
-                    ) {
-                        Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cari Resep")
+                        OutlinedButton(
+                            onClick = { 
+                                viewModel.searchByIngredients()
+                                viewModel.onIngredientsDetected(emptyList())
+                            },
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = GreenMain)
+                        ) {
+                            Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Cari Resep")
+                        }
+
+                        Button(
+                            onClick = { 
+                                viewModel.generateByIngredients()
+                                viewModel.onIngredientsDetected(emptyList())
+                            },
+                            modifier = Modifier.weight(1f).height(50.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = GreenMain)
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Generate AI")
+                        }
                     }
                 }
-            )
+            }
         }
 
         // Handle camera click from ViewModel
         LaunchedEffect(viewModel.isDetectionActive) {
             if (viewModel.isDetectionActive) {
-                permissionLauncher.launch(android.Manifest.permission.CAMERA)
+                showInputSourceSelector = true
                 viewModel.isDetectionActive = false
+            }
+        }
+
+        // --- NEW: Input Source Selector Bottom Sheet ---
+        if (showInputSourceSelector) {
+            ModalBottomSheet(
+                onDismissRequest = { showInputSourceSelector = false },
+                sheetState = rememberModalBottomSheetState(),
+                containerColor = Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
+                        .padding(bottom = 32.dp)
+                ) {
+                    Text(
+                        text = "Pilih Gambar Bahan",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GreenMain
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // Opsi Kamera
+                        Card(
+                            onClick = {
+                                showInputSourceSelector = false
+                                permissionLauncher.launch(android.Manifest.permission.CAMERA)
+                            },
+                            modifier = Modifier.weight(1f).height(100.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = LightGreenBg)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.kamera),
+                                    contentDescription = null,
+                                    tint = GreenMain,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Kamera", color = GreenMain, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        // Opsi Galeri
+                        Card(
+                            onClick = {
+                                showInputSourceSelector = false
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.weight(1f).height(100.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = LightGreenBg)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.vector),
+                                    contentDescription = null,
+                                    tint = GreenMain,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("Galeri", color = GreenMain, fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -372,22 +514,6 @@ fun BerandaScreen(
                     modifier = Modifier.padding(top = 40.dp, start = 16.dp).align(Alignment.TopStart)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
-                }
-
-                // Gallery Button
-                IconButton(
-                    onClick = { 
-                        galleryLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    modifier = Modifier.padding(top = 40.dp, end = 16.dp).align(Alignment.TopEnd)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.vector), // Ganti dengan ikon galeri jika ada
-                        contentDescription = "Buka Galeri",
-                        tint = Color.White
-                    )
                 }
             }
         }

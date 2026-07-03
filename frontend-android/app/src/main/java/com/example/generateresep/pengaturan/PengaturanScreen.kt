@@ -3,6 +3,7 @@ package com.example.generateresep.pengaturan
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -14,13 +15,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.generateresep.ui.theme.*
+import com.example.generateresep.viewmodel.AuthViewModel
 import com.example.generateresep.viewmodel.SettingsViewModel
 
 @Composable
 fun PengaturanScreen(
-    viewModel: SettingsViewModel = viewModel()
+    viewModel: SettingsViewModel = viewModel(),
+    authViewModel: AuthViewModel = hiltViewModel(),
+    onLogoutClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -72,6 +77,24 @@ fun PengaturanScreen(
             title = "Tentang",
             onClick = { /* Aksi tentang aplikasi */ }
         )
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Tombol Logout
+        Button(
+            onClick = { 
+                authViewModel.logout()
+                onLogoutClick()
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 32.dp)
+                .height(55.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFEBEE)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(text = "Keluar Akun", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        }
     }
 }
 

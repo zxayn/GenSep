@@ -8,9 +8,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.generateresep.R
 import com.example.generateresep.data.RecipeRepository
+import com.example.generateresep.data.TokenManager
 import com.example.generateresep.model.Recipe
 import com.example.generateresep.model.RecipeData
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -20,9 +25,19 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecipeViewModel @Inject constructor(
-    private val repository: RecipeRepository
+    private val repository: RecipeRepository,
+    private val tokenManager: TokenManager // <--- MENGAMBIL DARI MEMORI PERMANEN
 ) : ViewModel() {
-    val savedRecipes = repository.allSavedRecipes
+
+    // Membaca username secara real-time dari memori untuk database lokal (Riwayat/Saved)
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val savedRecipes = tokenManager.username.flatMapLatest { username ->
+        if (username.isNullOrBlank()) {
+            flowOf(emptyList())
+        } else {
+            repository.getAllSavedRecipes(username)
+        }
+    }
 
     var searchQuery by mutableStateOf("")
     var isDockExpanded by mutableStateOf(false)
@@ -60,7 +75,10 @@ class RecipeViewModel @Inject constructor(
             isGenerating = true
             errorMessage = null
             try {
-                val response = repository.generateRecipeFromText(searchQuery)
+                // <--- MENGAMBIL USERNAME TERBARU SEBELUM NEMBAK API
+                val currentUser = tokenManager.username.firstOrNull() ?: ""
+                val response = repository.generateRecipeFromText(searchQuery, currentUser)
+
                 if (response.isSuccessful && response.body()?.status == "success") {
                     val data = response.body()?.data
                     if (data != null) mapToRecipe(data)
@@ -75,7 +93,7 @@ class RecipeViewModel @Inject constructor(
         }
     }
 
-    // FUNGSI 2: Kirim Foto ke Django -> YOLO deteksi -> Gemini meracik resep langsung!
+    // FUNGSI 2: Kirim Foto ke Django -> YOLO deteksi saja!
     fun detectIngredients(bitmap: Bitmap) {
         viewModelScope.launch {
             isDetecting = true
@@ -87,19 +105,26 @@ class RecipeViewModel @Inject constructor(
                 val requestBody = byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("image", "ingredient.jpg", requestBody)
 
-                val response = repository.detectAndGenerateRecipe(body)
+                val currentUser = tokenManager.username.firstOrNull() ?: ""
+                val response = repository.detectOnly(body, currentUser)
 
-                if (response.isSuccessful && response.body()?.status == "success") {
-                    val data = response.body()?.data
-                    if (data != null) {
-                        detectedIngredients = response.body()?.detectedingredients ?: emptyList()
-                        mapToRecipe(data)
+                if (response.isSuccessful) {
+                    val bodyResult = response.body()
+                    if (bodyResult?.status == "success") {
+                        detectedIngredients = bodyResult.detectedingredients ?: emptyList()
+                    } else {
+                        errorMessage = bodyResult?.message ?: "Gagal mendeteksi bahan."
                     }
                 } else {
-                    errorMessage = response.body()?.message ?: "Gagal mendeteksi bahan."
+                    // Berikan info detail jika 404 agar user tahu endpoint belum ada di Django
+                    errorMessage = if (response.code() == 404) {
+                        "Error 404: Endpoint 'api/detect-only/' tidak ditemukan di server Django Anda."
+                    } else {
+                        "Server Error ${response.code()}: ${response.message()}"
+                    }
                 }
             } catch (e: Exception) {
-                errorMessage = "Gagal terhubung ke Django: ${e.message}"
+                errorMessage = "Gagal terhubung ke Django: ${e.localizedMessage}"
             } finally {
                 isDetecting = false
             }
@@ -131,8 +156,8 @@ class RecipeViewModel @Inject constructor(
     }
 
     fun loadRecipeById(id: Int) {
-        if (id == 0) return // ID 0 biasanya berarti resep baru di-generate
-        
+        if (id == 0) return
+
         viewModelScope.launch {
             val entity = repository.getRecipeById(id)
             if (entity != null) {
@@ -160,5 +185,38 @@ class RecipeViewModel @Inject constructor(
     }
 
     fun searchByIngredients() {}
-    fun generateByIngredients() {}
+    fun generateByIngredients() {
+        if (detectedIngredients.isEmpty()) return
+        val query = detectedIngredients.joinToString(", ")
+        
+        viewModelScope.launch {
+            isGenerating = true
+            errorMessage = null
+            try {
+                val currentUser = tokenManager.username.firstOrNull() ?: ""
+                val response = repository.generateRecipeFromText(query, currentUser)
+
+                if (response.isSuccessful) {
+                    val bodyResult = response.body()
+                    if (bodyResult?.status == "success") {
+                        val data = bodyResult.data
+                        if (data != null) mapToRecipe(data)
+                    } else {
+                        errorMessage = bodyResult?.message ?: "Gagal mendapatkan resep."
+                    }
+                } else {
+                    errorMessage = "Server Error ${response.code()}: ${response.message()}"
+                }
+            } catch (e: Exception) {
+                errorMessage = "Error Koneksi ke Server Django: ${e.localizedMessage}"
+            } finally {
+                isGenerating = false
+            }
+        }
+    }
+
+    fun resetGeneratedRecipe() {
+        generatedRecipe = null
+        errorMessage = null
+    }
 }

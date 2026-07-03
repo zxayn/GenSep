@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.generateresep.R
 import com.example.generateresep.model.Note
@@ -30,7 +31,7 @@ import com.example.generateresep.viewmodel.CatatanViewModel
 
 @Composable
 fun CatatanScreen(
-    viewModel: CatatanViewModel = viewModel()
+    viewModel: CatatanViewModel = hiltViewModel()
 ) {
     Box(
         modifier = Modifier

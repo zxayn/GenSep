@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-*g)e0xw_kdegckk6z7h+w3pl#0^5$+hj-cde2t!gb6r8gv&=_y
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'api_resep',
 ]
 
 MIDDLEWARE = [
@@ -115,3 +116,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+# Konfigurasi Folder untuk menyimpan gambar (Penting untuk ImageField)
+import os
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Mematikan sementara kewajiban garis miring (/) di akhir URL agar Android tidak error
+APPEND_SLASH = False
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

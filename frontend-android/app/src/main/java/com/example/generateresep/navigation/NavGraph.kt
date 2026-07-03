@@ -1,5 +1,7 @@
 package com.example.generateresep.navigation
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -17,13 +19,19 @@ import com.example.generateresep.viewmodel.AuthViewModel
 import com.example.generateresep.viewmodel.RecipeViewModel
 
 @Composable
-fun NavGraph(navController: NavHostController) {
-    // 🌟 KUNCI PERBAIKAN: Kita buat ViewModel Resep di sini agar bisa di-share ke banyak layar
+fun NavGraph(
+    navController: NavHostController,
+    startDestination: String = Screen.Login.route
+) {
     val sharedRecipeViewModel: RecipeViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Login.route
+        startDestination = startDestination,
+        enterTransition = { fadeIn(animationSpec = tween(400)) + slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(400)) },
+        exitTransition = { fadeOut(animationSpec = tween(400)) + slideOutHorizontally(targetOffsetX = { -1000 }, animationSpec = tween(400)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(400)) + slideInHorizontally(initialOffsetX = { -1000 }, animationSpec = tween(400)) },
+        popExitTransition = { fadeOut(animationSpec = tween(400)) + slideOutHorizontally(targetOffsetX = { 1000 }, animationSpec = tween(400)) }
     ) {
         composable(Screen.Login.route) {
             val authViewModel: AuthViewModel = hiltViewModel()
@@ -50,8 +58,16 @@ fun NavGraph(navController: NavHostController) {
                 }
             )
         }
-        composable(Screen.Beranda.route) {
-            // Gunakan shared ViewModel di sini
+        composable(
+            route = Screen.Beranda.route,
+            enterTransition = {
+                if (initialState.destination.route == Screen.Login.route || initialState.destination.route == Screen.Register.route) {
+                    scaleIn(animationSpec = tween(600), initialScale = 0.8f) + fadeIn(animationSpec = tween(600))
+                } else {
+                    fadeIn(animationSpec = tween(400)) + slideInHorizontally(initialOffsetX = { 1000 }, animationSpec = tween(400))
+                }
+            }
+        ) {
             BerandaScreen(
                 viewModel = sharedRecipeViewModel,
                 onRecipeClick = { recipeId ->
@@ -61,10 +77,15 @@ fun NavGraph(navController: NavHostController) {
         }
         composable(
             route = Screen.DetailResep.route,
-            arguments = listOf(navArgument("recipeId") { type = NavType.IntType })
+            arguments = listOf(navArgument("recipeId") { type = NavType.IntType }),
+            enterTransition = {
+                slideInVertically(initialOffsetY = { it }, animationSpec = tween(500)) + fadeIn(animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutVertically(targetOffsetY = { it }, animationSpec = tween(500)) + fadeOut(animationSpec = tween(500))
+            }
         ) { backStackEntry ->
             val recipeId = backStackEntry.arguments?.getInt("recipeId") ?: 0
-            // Gunakan shared ViewModel yang SAMA persis di sini
             DetailResepScreen(
                 recipeId = recipeId,
                 onBackClick = { navController.popBackStack() },
@@ -75,7 +96,15 @@ fun NavGraph(navController: NavHostController) {
             CatatanScreen()
         }
         composable(Screen.Pengaturan.route) {
-            PengaturanScreen()
+            val authViewModel: AuthViewModel = hiltViewModel()
+            PengaturanScreen(
+                authViewModel = authViewModel,
+                onLogoutClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

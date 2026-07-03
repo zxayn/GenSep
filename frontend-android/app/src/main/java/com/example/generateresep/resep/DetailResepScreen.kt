@@ -122,6 +122,10 @@ fun DetailResepScreen(
     DisposableEffect(Unit) {
         onDispose {
             voiceManager.destroy()
+            // Reset state AI agar tidak terjadi loop navigasi saat kembali ke Beranda
+            if (recipeId == 999) {
+                viewModel.resetGeneratedRecipe()
+            }
         }
     }
 
@@ -130,7 +134,10 @@ fun DetailResepScreen(
             TopAppBar(
                 title = { Text("Detail Resep", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    IconButton(onClick = {
+                        viewModel.resetGeneratedRecipe()
+                        onBackClick()
+                    }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",

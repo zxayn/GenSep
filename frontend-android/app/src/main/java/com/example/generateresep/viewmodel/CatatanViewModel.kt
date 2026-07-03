@@ -4,23 +4,29 @@ import android.app.Application
 import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.generateresep.data.AppDatabase
 import com.example.generateresep.data.NoteEntity
 import com.example.generateresep.data.NoteRepository
 import com.example.generateresep.model.Note
+import com.example.generateresep.utils.UserSession
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class CatatanViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class CatatanViewModel @Inject constructor(
+    application: Application,
     private val repository: NoteRepository
+) : AndroidViewModel(application) {
+    
     val notes = mutableStateListOf<Note>()
+    var syncErrorMessage: String? = null // For Snackbars
+    
+    private val currentUsername = UserSession.currentUsername // Ideally fetch from Auth storage
 
     init {
-        val noteDao = AppDatabase.getDatabase(application).noteDao()
-        repository = NoteRepository(noteDao)
-        
         viewModelScope.launch {
-            repository.allNotes.collectLatest { entities ->
+            repository.getAllNotes(currentUsername).collectLatest { entities ->
                 notes.clear()
                 notes.addAll(entities.map { it.toNote() })
             }
@@ -32,7 +38,7 @@ class CatatanViewModel(application: Application) : AndroidViewModel(application)
 
     fun addNote() {
         val newNote = Note(
-            id = 0, // 0 for auto-generate in Room
+            id = 0,
             title = "",
             ingredients = listOf(""),
             isExpanded = true,
@@ -45,14 +51,12 @@ class CatatanViewModel(application: Application) : AndroidViewModel(application)
         val editingNote = notes.find { it.isEditing }
         if (editingNote != null) {
             viewModelScope.launch {
-                if (editingNote.id == 0) {
-                    repository.insert(editingNote.toEntity())
-                } else {
-                    repository.update(editingNote.toEntity())
+                try {
+                    repository.insert(editingNote.toEntity(), currentUsername)
+                } catch (e: Exception) {
+                    syncErrorMessage = "Gagal sinkronisasi ke server"
                 }
             }
-            // Logic to clear editing state is handled by Flow collection usually, 
-            // but for immediate UI feedback:
             val index = notes.indexOf(editingNote)
             if (index != -1) {
                 notes[index] = editingNote.copy(isEditing = false)
@@ -68,12 +72,12 @@ class CatatanViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun deleteNote(note: Note) {
-        if (note.id != 0) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            try {
                 repository.delete(note.toEntity())
+            } catch (e: Exception) {
+                syncErrorMessage = "Gagal menghapus dari server"
             }
-        } else {
-            notes.remove(note)
         }
     }
 
@@ -98,7 +102,6 @@ class CatatanViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    // Helper extensions
     private fun NoteEntity.toNote() = Note(
         id = id,
         title = title,
